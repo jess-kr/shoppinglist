@@ -122,7 +122,7 @@ public class ScreenRenderer {
             if (row instanceof String) {
                 if (y > 0 && y < h + ScreenState.CAT_H) {
                     batch.begin();
-                    catHeadPatch.draw(batch, 0, y-ScreenState.PAD, w-20, ScreenState.CAT_H);
+                    catHeadPatch.draw(batch, 0, y-ScreenState.PAD, w-ScreenState.PAD, ScreenState.CAT_H);
                     fonts.small.setColor(ScreenColors.TEXT_SEC);
                     fonts.small.draw(batch, formatCategory((String) row), ScreenState.PAD, y-ScreenState.PAD/2+10);
                     batch.end();
@@ -139,6 +139,7 @@ public class ScreenRenderer {
         }
 
         Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
+        drawScrollbar(w, h);
     }
 
     private void drawItemRow(ShoppingItem item, float x, float y, float w, float h) {
@@ -254,20 +255,7 @@ public class ScreenRenderer {
 
 
 
-    public void dispose() {
-        bgTexture.dispose();
-        doneTexture.dispose();
-        notDoneTexture.dispose();
-        barTexture.dispose();
-        catHeadTex.dispose();
-        rowTex.dispose();
-        btnTex.dispose();
 
-        rowPatch.getTexture().dispose();
-        catHeadPatch.getTexture().dispose();
-
-
-    }
 
     // HELPERS
 
@@ -284,7 +272,43 @@ public class ScreenRenderer {
         return sb.toString().trim();
     }
 
+    private void drawScrollbar(float w, float h) {
+        float totalH   = 0;
+        for (Object row : state.rows)
+            totalH += (row instanceof String) ? ScreenState.CAT_H + 10 : ScreenState.ROW_H;
+
+        float visibleH  = h - ScreenState.HEADER_H - ScreenState.SEARCHBAR_H
+            - ScreenState.SELECT_ROW_H - ScreenState.BOTTOM_BAR_H;
+
+        if (totalH <= visibleH) return; // no scrollbar needed
+
+        float barRatio  = visibleH / totalH;
+        float barH      = Math.max(40f * Gdx.graphics.getDensity(), visibleH * barRatio);
+        float barTravel = visibleH - barH;
+        float scrollRatio = state.maxScroll > 0 ? state.scrollY / state.maxScroll : 0;
+        float barY      = ScreenState.BOTTOM_BAR_H + barTravel - scrollRatio * barTravel;
+        float barX      = w - ScreenState.SCROLLBAR_W - 4f * Gdx.graphics.getDensity();
+
+        shape.setProjectionMatrix(state.projMatrix);
+        shape.begin(ShapeRenderer.ShapeType.Filled);
+        shape.setColor(ScreenColors.TEXT_PRI);
+        shape.rect(barX, barY, ScreenState.SCROLLBAR_W, barH);
+        shape.end();
+    }
+
+    public void dispose() {
+        bgTexture.dispose();
+        doneTexture.dispose();
+        notDoneTexture.dispose();
+        barTexture.dispose();
+        catHeadTex.dispose();
+        rowTex.dispose();
+        btnTex.dispose();
+
+        rowPatch.getTexture().dispose();
+        catHeadPatch.getTexture().dispose();
 
 
+    }
 
 }

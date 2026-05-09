@@ -16,6 +16,8 @@ public class ScreenState {
 
     public static float SELECT_ROW_H = 40f;
 
+    public static float SCROLLBAR_W = 6f;
+
 
     public float screenW, screenH;
     public float scrollY = 0f;
@@ -91,6 +93,7 @@ public class ScreenState {
         CHECKBOX_R   = 10f  * dp;
         BOTTOM_BAR_H = 60f * dp;
         SELECT_ROW_H = 40f * dp;
+        SCROLLBAR_W = 6f * dp;
     }
 
     public boolean allNeeded() {
