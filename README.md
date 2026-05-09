@@ -33,3 +33,11 @@ Useful Gradle tasks and flags:
 
 Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
 For example, `core:clean` removes `build` folder only from the `core` project.
+
+
+## Use
+This Project imports my frequently bought items (including their categories) from a SQLLite database.
+It displays them sorted by category. 
+The user can also choose what items are needed this shopping run and check them off when they have been bought :)
+
+This was my first time developing something for android so its main purpose is to figure that out.
