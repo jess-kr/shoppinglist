@@ -239,7 +239,7 @@ public class CategoryScreen implements Screen {
         return Math.max(0, Math.min(s, maxScroll));
     }
 
-    private String formatCategory(String raw) {
+    public String formatCategory(String raw) {
         String[] words = raw.toLowerCase().split("_");
         StringBuilder sb = new StringBuilder();
         for (String word : words) {

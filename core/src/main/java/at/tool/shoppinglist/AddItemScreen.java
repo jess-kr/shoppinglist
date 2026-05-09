@@ -252,7 +252,7 @@ public class AddItemScreen implements Screen {
             // white background
             shape.begin(ShapeRenderer.ShapeType.Filled);
             shape.setColor(Color.WHITE);
-            shape.rect(dropX, dropY_base, barW, dropH);
+            shape.rect(pad, dropY_base, barW, dropH);
             shape.end();
 
             // scissor clip
@@ -274,7 +274,7 @@ public class AddItemScreen implements Screen {
                     batch.begin();
                     fonts.body.setColor(cat.equals(itemCategory)
                         ? ScreenColors.BLUE : ScreenColors.TEXT_PRI);
-                    fonts.body.draw(batch, cat, dropX + 16, iy + itemH / 2f + 8f * dp);
+                    fonts.body.draw(batch, formatCategory(cat), dropX + 16, iy + itemH / 2f + 8f * dp);
                     batch.end();
                 }
                 startY -= itemH + itemGap;
@@ -327,6 +327,18 @@ public class AddItemScreen implements Screen {
     @Override public void resize(int w, int h) {
         viewport.update(w, h, true);
         screenW = w; screenH = h;
+    }
+
+    public String formatCategory(String raw) {
+        String[] words = raw.toLowerCase().split("_");
+        StringBuilder sb = new StringBuilder();
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                sb.append(Character.toUpperCase(word.charAt(0)))
+                    .append(word.substring(1)).append(" ");
+            }
+        }
+        return sb.toString().trim();
     }
 
     private float clampDropdown(float s) {
