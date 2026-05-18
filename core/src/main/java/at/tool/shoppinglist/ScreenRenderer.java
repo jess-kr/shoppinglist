@@ -1,7 +1,6 @@
 package at.tool.shoppinglist;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -9,12 +8,6 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.NinePatch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-
-import org.w3c.dom.Text;
-
-import java.awt.Shape;
-
-import javax.swing.plaf.synth.SynthTextAreaUI;
 
 public class ScreenRenderer {
     private final SpriteBatch batch;
@@ -71,9 +64,9 @@ public class ScreenRenderer {
 
     private void drawHeader(float w, float h) {
         batch.begin();
-        fonts.title.setColor(ScreenColors.TEXT_PRI);
+        fonts.title.setColor(ScreenColors.TEXT_DARK);
         fonts.title.draw(batch, "Shopping List", ScreenState.PAD, h - ScreenState.PAD*2);
-        fonts.body.setColor(ScreenColors.TEXT_SEC);
+        fonts.body.setColor(ScreenColors.TEXT_WHITE);
         batch.end();
 
 
@@ -95,7 +88,7 @@ public class ScreenRenderer {
                 : state.searchQuery + (state.searchFocused ? "|" : "");
         fonts.body.setColor(state.searchQuery.isEmpty() && !state.searchFocused
                 ? Color.WHITE
-                : ScreenColors.TEXT_SEC);
+                : ScreenColors.TEXT_WHITE);
         fonts.body.draw(batch, display,
                 ScreenState.PAD + 12,
                 barY + (ScreenState.SEARCHBAR_H - 6) / 2f + 6);
@@ -123,7 +116,7 @@ public class ScreenRenderer {
                 if (y > 0 && y < h + ScreenState.CAT_H) {
                     batch.begin();
                     catHeadPatch.draw(batch, 0, y-ScreenState.PAD, w-ScreenState.PAD, ScreenState.CAT_H);
-                    fonts.small.setColor(ScreenColors.TEXT_SEC);
+                    fonts.small.setColor(ScreenColors.TEXT_WHITE);
                     fonts.small.draw(batch, formatCategory((String) row), ScreenState.PAD, y-ScreenState.PAD/2+10);
                     batch.end();
                 }
@@ -178,7 +171,7 @@ public class ScreenRenderer {
 
             //Text in Row
             batch.begin();
-            fonts.body.setColor(item.isDone() ? ScreenColors.TEXT_SEC : ScreenColors.TEXT_PRI);
+            fonts.body.setColor(item.isDone() ? ScreenColors.TEXT_DARK : ScreenColors.TEXT_WHITE);
             fonts.body.draw(batch, item.getName(), circleX + ScreenState.CHECKBOX_R + 50, cy + 20);
             batch.end();
         }
@@ -199,12 +192,12 @@ public class ScreenRenderer {
         batch.begin();
         // categories button - left side
         batch.draw(btnTex, centerX-160f*dp, btnY/2-ScreenState.PAD/2f+20,100*dp,ScreenState.BOTTOM_BAR_H-50);
-        fonts.body.setColor(ScreenColors.TEXT_PRI);
+        fonts.body.setColor(ScreenColors.TEXT_DARK);
         fonts.body.draw(batch, "Categories",
             centerX - 150f * dp, btnY);
 
         // add button - right side
-        fonts.body.setColor(ScreenColors.TEXT_PRI);
+        fonts.body.setColor(ScreenColors.TEXT_DARK);
         batch.draw(btnTex, centerX+60f*dp, btnY/2-ScreenState.PAD/2f+20,100*dp,ScreenState.BOTTOM_BAR_H-50);
         fonts.body.draw(batch, "Add Item",
             centerX + 80f * dp, btnY);
@@ -247,7 +240,7 @@ public class ScreenRenderer {
 
         // labels
         batch.begin();
-        fonts.small.setColor(ScreenColors.TEXT_PRI);
+        fonts.small.setColor(ScreenColors.TEXT_DARK);
         fonts.small.draw(batch, "need all", cx1 - (ScreenState.CHECKBOX_R+27f*dp), rowY + 30f*dp);
         fonts.small.draw(batch, "all done",   cx2 - ScreenState.CHECKBOX_R/2, rowY + 30f*dp);
         batch.end();
@@ -291,7 +284,7 @@ public class ScreenRenderer {
 
         shape.setProjectionMatrix(state.projMatrix);
         shape.begin(ShapeRenderer.ShapeType.Filled);
-        shape.setColor(ScreenColors.TEXT_PRI);
+        shape.setColor(ScreenColors.TEXT_DARK);
         shape.rect(barX, barY, ScreenState.SCROLLBAR_W, barH);
         shape.end();
     }

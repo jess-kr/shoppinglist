@@ -15,6 +15,7 @@ public class CategoryScreen implements Screen {
     private final Main game;
     private final ShoppingList shoppingList;
 
+    private final ScreenState state;
     private SpriteBatch batch;
     private ShapeRenderer shape;
     private OrthographicCamera camera;
@@ -42,9 +43,11 @@ public class CategoryScreen implements Screen {
 
     protected Texture btnTexture;
 
-    public CategoryScreen(Main game, ShoppingList shoppingList) {
+    public CategoryScreen(Main game, ShoppingList shoppingList, ScreenState state) {
         this.game = game;
         this.shoppingList = shoppingList;
+        this.state = state;
+
         barTexture = new Texture(Gdx.files.internal("media/bar.png"));
         bgTexture = new Texture(Gdx.files.internal("media/background.png"));
         btnTexture = new Texture(Gdx.files.internal("media/button.png"));
@@ -112,7 +115,7 @@ public class CategoryScreen implements Screen {
         float tileH = 70f * dp;
         float rows  = (float) Math.ceil(categories.size() / COLS);
         float total = HEADER_H * dp + PAD * dp + rows * (tileH + PAD * dp);
-        maxScroll   = Math.max(0, total - (screenH-ScreenState.BOTTOM_BAR_H));
+        maxScroll   = Math.max(0, total - (screenH-ScreenState.BOTTOM_BAR_H+10));
     }
 
     private void handleTap(float wx, float wy) {
@@ -162,6 +165,7 @@ public class CategoryScreen implements Screen {
 
     @Override
     public void render(float delta) {
+        state.projMatrix.set(camera.combined);
         if (!dragging) {
             scrollY  = clamp(scrollY + velocity);
             velocity *= 0.88f;
@@ -186,7 +190,7 @@ public class CategoryScreen implements Screen {
 
         // header
         batch.begin();
-        fonts.title.setColor(ScreenColors.TEXT_PRI);
+        fonts.title.setColor(ScreenColors.TEXT_DARK);
         fonts.title.draw(batch, "Categories", PAD * Gdx.graphics.getDensity(),
             screenH - PAD * 2 * Gdx.graphics.getDensity());
         batch.end();
@@ -199,7 +203,7 @@ public class CategoryScreen implements Screen {
         float startY = screenH - HEADER_H * dp - pad + scrollY;
 
         Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
-        Gdx.gl.glScissor(0, 0, (int) screenW, (int) (screenH - HEADER_H * dp));
+        Gdx.gl.glScissor(0, (int) ScreenState.BOTTOM_BAR_H+10, (int) screenW, (int) (screenH - ScreenState.BOTTOM_BAR_H- HEADER_H * dp));
 
         for (int i = 0; i < categories.size(); i++) {
             int col = i % 2;
@@ -223,12 +227,14 @@ public class CategoryScreen implements Screen {
 
         Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
 
+        drawScrollbar();
+
         //bottom bar
         float centerX = Gdx.graphics.getWidth() / 2f;
         batch.begin();
         batch.draw(barTexture, 0, 0, screenW, ScreenState.BOTTOM_BAR_H);
         batch.draw(btnTexture, centerX-160f*dp, ScreenState.BOTTOM_BAR_H/2f - 20f * dp,100*dp,ScreenState.BOTTOM_BAR_H-50);
-        fonts.body.setColor(ScreenColors.TEXT_PRI);
+        fonts.body.setColor(ScreenColors.TEXT_DARK);
         fonts.body.draw(batch, "Back to list",
             ScreenState.PAD,
             ScreenState.BOTTOM_BAR_H / 2f + 8f * dp);
@@ -249,6 +255,29 @@ public class CategoryScreen implements Screen {
             }
         }
         return sb.toString().trim();
+    }
+
+    private void drawScrollbar() {
+        float dp      = Gdx.graphics.getDensity();
+        float pad     = PAD * dp;
+        float tileH   = 70f * dp;
+        float rows    = (float) Math.ceil(categories.size() / COLS);
+        float totalH  = HEADER_H * dp + pad + rows * (tileH + pad);
+        float visibleH = screenH - ScreenState.BOTTOM_BAR_H - HEADER_H * dp;
+
+        if (totalH <= visibleH) return;
+
+        float barRatio  = visibleH / totalH;
+        float barH      = Math.max(40f * dp, visibleH * barRatio);
+        float barTravel = visibleH - barH;
+        float scrollRatio = maxScroll > 0 ? scrollY / maxScroll : 0;
+        float barY      = ScreenState.BOTTOM_BAR_H + barTravel - scrollRatio * barTravel;
+        float barX      = screenW - ScreenState.SCROLLBAR_W - 4f * dp;
+
+        shape.begin(ShapeRenderer.ShapeType.Filled);
+        shape.setColor(ScreenColors.TEXT_DARK);
+        shape.rect(barX, barY, ScreenState.SCROLLBAR_W, barH);
+        shape.end();
     }
 
     @Override public void resize(int w, int h) {

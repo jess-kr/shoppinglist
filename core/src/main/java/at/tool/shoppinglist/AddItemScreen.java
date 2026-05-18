@@ -215,16 +215,16 @@ public class AddItemScreen implements Screen {
 
         // title
         batch.begin();
-        fonts.title.setColor(ScreenColors.TEXT_PRI);
+        fonts.title.setColor(ScreenColors.TEXT_DARK);
         fonts.title.draw(batch, "Add Item", pad, screenH - pad * 2);
         batch.end();
 
         // name field
         batch.begin();
         rowPatch.draw(batch, pad, screenH * 0.65f, barW, barH);
-        fonts.small.setColor(ScreenColors.TEXT_PRI);
+        fonts.small.setColor(ScreenColors.TEXT_DARK);
         fonts.small.draw(batch, "Item name", pad + 12, screenH * 0.65f + barH + 17f * dp);
-        fonts.body.setColor(ScreenColors.TEXT_PRI);
+        fonts.body.setColor(ScreenColors.TEXT_DARK);
         fonts.body.draw(batch,
             itemName + (nameFocused ? "|" : ""),
             pad + 12, screenH * 0.65f + barH / 2f + 8f * dp);
@@ -233,9 +233,9 @@ public class AddItemScreen implements Screen {
         // category field
         batch.begin();
         rowPatch.draw(batch, pad, screenH * 0.45f, barW, barH);
-        fonts.small.setColor(ScreenColors.TEXT_PRI);
+        fonts.small.setColor(ScreenColors.TEXT_DARK);
         fonts.small.draw(batch, "Category", pad + 12, screenH * 0.45f + barH + 17f * dp);
-        fonts.body.setColor(ScreenColors.TEXT_PRI);
+        fonts.body.setColor(ScreenColors.TEXT_DARK);
         fonts.body.draw(batch,
             itemCategory.isEmpty() ? "tap to select..." : itemCategory,
             pad + 12, screenH * 0.45f + barH / 2f + 8f * dp);
@@ -273,7 +273,7 @@ public class AddItemScreen implements Screen {
                 if (iy + itemH > dropY_base && iy < dropY_base + dropH) {
                     batch.begin();
                     fonts.body.setColor(cat.equals(itemCategory)
-                        ? ScreenColors.BLUE : ScreenColors.TEXT_PRI);
+                        ? ScreenColors.BLUE : ScreenColors.TEXT_DARK);
                     fonts.body.draw(batch, formatCategory(cat), dropX + 16, iy + itemH / 2f + 8f * dp);
                     batch.end();
                 }
@@ -291,7 +291,7 @@ public class AddItemScreen implements Screen {
             float barTop   = dropY_base + dropH - barHgt - scrollRatio * barTravel;
 
             shape.begin(ShapeRenderer.ShapeType.Filled);
-            shape.setColor(ScreenColors.TEXT_PRI);
+            shape.setColor(ScreenColors.TEXT_DARK);
             shape.rect(dropX + barW - 8f * dp, barTop, 6f * dp, barHgt);
             shape.end();
         }
@@ -307,14 +307,14 @@ public class AddItemScreen implements Screen {
 
         //Back Button
         batch.draw(btnTexture, centerX-160f*dp, btnY/2-ScreenState.PAD/2f+20,100*dp,ScreenState.BOTTOM_BAR_H-50);
-        fonts.body.setColor(ScreenColors.TEXT_PRI);
+        fonts.body.setColor(ScreenColors.TEXT_DARK);
         fonts.body.draw(batch, "Back to list",
             ScreenState.PAD,
             ScreenState.BOTTOM_BAR_H / 2f + 8f * dp);
 
         //Add Button
         batch.draw(btnTexture, centerX+60f*dp, btnY/2-ScreenState.PAD/2f+20,100*dp,ScreenState.BOTTOM_BAR_H-50);
-        fonts.body.setColor(ScreenColors.TEXT_PRI);
+        fonts.body.setColor(ScreenColors.TEXT_DARK);
         fonts.body.draw(batch, "Add Item",
             centerX + 80f * dp,
             ScreenState.BOTTOM_BAR_H / 2f + 8f * dp);

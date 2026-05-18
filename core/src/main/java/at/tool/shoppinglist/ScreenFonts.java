@@ -19,17 +19,17 @@ public class ScreenFonts {
         float dp = Gdx.graphics.getDensity();
 
         p.characters += "äöüÄÖÜßéàâ";
-        p.color = ScreenColors.TEXT_PRI;
+        p.color = ScreenColors.TEXT_DARK;
 
         p.size = (int)(30 * dp);
         title = gen.generateFont(p);
 
         p.size = (int)(15 * dp);
-        p.color = Color.WHITE;
+        p.color = ScreenColors.TEXT_WHITE;
         body = gen.generateFont(p);
 
         p.size = (int)(12 * dp);
-        p.color = ScreenColors.TEXT_SEC;
+        p.color = ScreenColors.TEXT_WHITE;
         small = gen.generateFont(p);
 
         gen.dispose();

@@ -9,8 +9,8 @@ public class ScreenColors {
     public static final Color SURFACE = hex(0x3d3d33ff);
     public static final Color BABYBLUE = new Color(196,199,253,1);
     public static final Color BLUE   = new Color(0,0,139,1);
-    public static final Color TEXT_PRI = hex(0x1a1a18ff);
-    public static final Color TEXT_SEC = new Color(255,255,255,1);
+    public static final Color TEXT_DARK = hex(0x1a1a18ff);
+    public static final Color TEXT_WHITE = new Color(255,255,255,1);
 
     public static Color hex(long rgba) {
         float r = ((rgba >> 24) & 0xFF) / 255f;
