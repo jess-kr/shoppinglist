@@ -3,24 +3,80 @@ package at.tool.shoppinglist;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Gdx;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
 public class ScreenInput extends InputAdapter {
     private final ScreenState state;
     private final ShoppingList shoppingList;
+    private final ScreenRenderer renderer;
 
-    public ScreenInput(ScreenState state, ShoppingList shoppingList) {
+    private final Map<ShoppingItem, Float> strikeTimers = new HashMap<>();
+
+    public ScreenInput(ScreenState state, ShoppingList shoppingList, ScreenRenderer renderer) {
         this.state = state;
         this.shoppingList = shoppingList;
+        this.renderer = renderer;
     }
 
     @Override
     public boolean touchDown(int x, int y, int ptr, int btn) {
-        float wx = x, wy = state.screenH - y;
+//unfocus the input field if tapped somewhere else
+        if (state.focusedAddRow != null) {
+            state.focusedAddRow = null;
+            state.addRowInput = "";
+            Gdx.input.setOnscreenKeyboardVisible(false);
+            state.rebuild();
+        }
+        float wy = state.screenH - y;
         state.touchStartY = wy;
-        state.lastTouchY  = wy;
-        state.dragging    = false;
-        state.velocity    = 0f;
+        state.lastTouchY = wy;
+        state.dragging = false;
+        state.velocity = 0f;
 
-        if (hitSearchBar(wx, wy)) {
+        //scrollbar taps
+        float barX = renderer.getScrollbarX(state.screenW);
+
+        float visibleH = state.getVisibleHeight(state.screenH);
+
+        float trackY = ScreenState.BOTTOM_BAR_H;
+
+        float hitPadding = 20f * Gdx.graphics.getDensity();
+
+        if (x >= barX - hitPadding &&
+            x <= barX + ScreenState.SCROLLBAR_W + hitPadding &&
+            wy >= trackY - hitPadding &&
+            wy <= trackY + visibleH + hitPadding) {
+
+            state.draggingScrollBar = true;
+
+            float barH =
+                renderer.getScrollbarHeight(state.screenH);
+
+            float travel = visibleH - barH;
+
+            float minY = ScreenState.BOTTOM_BAR_H;
+            float maxY = minY + travel;
+
+            // place thumb centered on tap
+            float newBarY = wy - barH / 2f;
+
+            newBarY = Math.max(minY,
+                Math.min(maxY, newBarY));
+
+            float ratio =
+                1f - ((newBarY - minY) / travel);
+
+            state.scrollY = ratio * state.maxScroll;
+
+            // drag from thumb center
+            state.scrollbarGrabOffset = barH / 2f;
+
+            return true;
+        }
+
+        if (hitSearchBar(x, wy)) {
             state.searchFocused = true;
             Gdx.input.setOnscreenKeyboardVisible(true);
         } else {
@@ -32,26 +88,102 @@ public class ScreenInput extends InputAdapter {
 
     @Override
     public boolean touchDragged(int x, int y, int ptr) {
+        float scrollSpeed = 1.2f;
         float wy = state.screenH - y;
-        float dy = wy - state.lastTouchY;
-        if (Math.abs(wy - state.touchStartY) > 10f* Gdx.graphics.getDensity()) state.dragging = true;
-        state.scrollY  = state.clampScroll(state.scrollY + dy);
-        state.velocity = dy;
+        float dy;
+
+        //Scrollbar Dragging
+        if (state.draggingScrollBar) {
+
+            float visibleH =
+                state.getVisibleHeight(state.screenH);
+
+            float barH =
+                renderer.getScrollbarHeight(state.screenH);
+
+            float travel = visibleH - barH;
+
+            float newBarY =
+                wy - state.scrollbarGrabOffset;
+
+            float minY = ScreenState.BOTTOM_BAR_H;
+            float maxY = minY + travel;
+
+            newBarY = Math.max(minY,
+                Math.min(maxY, newBarY));
+
+            float ratio =
+                1f - ((newBarY - minY) / travel);
+
+            state.scrollY = ratio * state.maxScroll;
+
+            return true;
+        }
+
+        //Normal Content Dragging
+        dy = wy - state.lastTouchY;
+        float minY = Gdx.graphics.getHeight()-(ScreenState.SEARCHBAR_H+ScreenState.SELECT_ROW_H+ScreenState.HEADER_H);
+        if (wy<minY){
+            state.dragging=false;
+        }
+        if (Math.abs(wy - state.touchStartY) > 10f * Gdx.graphics.getDensity())
+            state.dragging = true;
+
+        if (state.touchStartY >= minY) {
+            state.lastTouchY = wy;
+            return true;
+        }
+
+        state.scrollY = state.clampScroll(state.scrollY + dy*scrollSpeed);
+        state.velocity = dy*scrollSpeed;
+
+
         state.lastTouchY = wy;
         return true;
     }
 
     @Override
     public boolean touchUp(int x, int y, int ptr, int btn) {
+        boolean wasDraggingScrollBar = state.draggingScrollBar;
+        state.draggingScrollBar = false;
+
         Gdx.app.log("ShoppingList", "Touching up: " + x + ", " + y);
-        float wx = x, wy = state.screenH - y;
-        if (!state.dragging) handleTap(wx, wy);
+
+        float wy = state.screenH - y;
+        if (!state.dragging && !wasDraggingScrollBar) handleTap(x, wy);
         state.dragging = false;
         return true;
     }
 
     @Override
     public boolean keyTyped(char c) {
+        // ── Add row input ─────────────────────────────────────────────────────
+        if (state.focusedAddRow != null) {
+            if (c == '\n' || c == '\r') {
+                // Enter — save the item
+                String name = state.addRowInput.trim();
+                if (!name.isEmpty()) {
+                    shoppingList.getDatabase().saveNewItem(name, state.focusedAddRow.category);
+                    shoppingList.reload();
+                }
+                state.focusedAddRow = null;
+                state.addRowInput   = "";
+                Gdx.input.setOnscreenKeyboardVisible(false);
+                state.rebuild();
+                return true;
+            } else if (c == '\b') {
+                if (!state.addRowInput.isEmpty())
+                    state.addRowInput = state.addRowInput
+                        .substring(0, state.addRowInput.length() - 1);
+                state.rebuild();
+            } else if (c >= 32) {
+                state.addRowInput += c;
+                state.rebuild();
+            }
+            return true;
+        }
+
+    //Search Bar Input
         if (!state.searchFocused) return false;
         if (c == '\b') {
             if (!state.searchQuery.isEmpty())
@@ -64,99 +196,150 @@ public class ScreenInput extends InputAdapter {
     }
 
     private void handleTap(float wx, float wy) {
-        if (wy <= ScreenState.BOTTOM_BAR_H) {
-            float dp = Gdx.graphics.getDensity();
-            float centerX = state.screenW / 2f;
-
-            // categories button
-            if (wx <= centerX) {
-                ((Main) Gdx.app.getApplicationListener()).showCategories();
-                return;
+        //Delete popup above all so other taps are blocked during it
+        if (state.pendingRemove != null) {
+            if (hitConfirm(wx, wy)) {
+                ShoppingItem item = state.pendingRemove;
+                shoppingList.removeItem(item.getName());
+                shoppingList.getDatabase().removeItem(item.getName());
+                state.pendingRemove = null;
+                state.rebuild();
+            } else if (hitCancel(wx, wy)) {
+                state.pendingRemove = null;
             }
-
-            // add button
-            if (wx > centerX) {
-                ((Main) Gdx.app.getApplicationListener()).showAddItem();
-                return;
-            }
+            return;
         }
 
-        // select row
-        float selectRowY = state.screenH - ScreenState.HEADER_H - ScreenState.SEARCHBAR_H
-            - ScreenState.SELECT_ROW_H / 2f - 4f * Gdx.graphics.getDensity();
-        float cx1 = ScreenState.PAD + 20 + ScreenState.CHECKBOX_R;
-        float cx2 = cx1 + 30 + ScreenState.CHECKBOX_R + ScreenState.PAD / 2;
+            if (wy <= ScreenState.BOTTOM_BAR_H) {
+                float centerX = state.screenW / 2f;
 
-        if (Math.abs(wy - selectRowY) < ScreenState.CHECKBOX_R + 10) {
-            if (Math.abs(wx - cx1) < ScreenState.CHECKBOX_R + 10) {
-                // toggle all needed
-                boolean allNeeded = shoppingList.getAll().stream().allMatch(ShoppingItem::isNeeded);
-                for (ShoppingItem item : shoppingList.getAll()) {
-                    item.setNeeded(!allNeeded);
+                // categories button
+                if (wx <= centerX) {
+                    ((Main) Gdx.app.getApplicationListener()).showCategories();
+                    return;
                 }
-                state.rebuild();
-                return;
             }
-            if (Math.abs(wx - cx2) < ScreenState.CHECKBOX_R + 10) {
-                // toggle all done
-                boolean allDone = shoppingList.getAll().stream().allMatch(ShoppingItem::isDone);
-                for (ShoppingItem item : shoppingList.getAll()) {
-                    item.setDone(!allDone);
-                }
-                state.rebuild();
-                return;
-            }
-        }
 
-         // item rows
-        float y = state.screenH - ScreenState.HEADER_H - ScreenState.SEARCHBAR_H
-            - ScreenState.PAD + state.scrollY;
-        for (Object row : state.rows) {
-            if (row instanceof String) {
-                y -= ScreenState.CAT_H;
-            } else {
-                ShoppingItem item = (ShoppingItem) row;
-                float rowTop = y;
-                float rowBot = y - ScreenState.ROW_H;
+            // select row
+            float h = Gdx.graphics.getHeight();
+            float selectRowY = h - ScreenState.HEADER_H/1.3f - ScreenState.SEARCHBAR_H;
 
-                if (wy >= rowBot && wy <= rowTop && wx >= ScreenState.PAD
-                    && wx <= state.screenW - ScreenState.PAD) {
+            float cx1 = ScreenState.PAD + 20 + ScreenState.CHECKBOX_R;
+            float cx2 = cx1 + 30 + ScreenState.CHECKBOX_R + ScreenState.PAD / 2;
+            float cx3 = Gdx.graphics.getWidth()-ScreenState.SCROLLBAR_W-ScreenState.PAD*1.5f;
+            float r = ScreenState.CHECKBOX_R + 10;
 
-
-                    cx1 = ScreenState.PAD + 20 + ScreenState.CHECKBOX_R;
-                    cx2 = cx1 + 30 + ScreenState.CHECKBOX_R + ScreenState.PAD / 2;
-                    float cy  = rowBot + ScreenState.ROW_H / 2f;
-
-                    float distToNeeded = Math.abs(wx - cx1);
-                    float distToDone   = Math.abs(wx - cx2);
-                    Gdx.app.log("DEBUG", "row hit at "+wx +" "+wy );
-
-                    if (distToNeeded < ScreenState.CHECKBOX_R +5) {
-                        shoppingList.toggleNeeded(item.getName());
-                        Gdx.app.log("DEBUG","Needed toggled: " + item.getName());
-                    } else if (distToDone < ScreenState.CHECKBOX_R +5) {
-                        shoppingList.toggle(item.getName());
-                        Gdx.app.log("DEBUG","Done toggled: " + item.getName());
+            if (Math.abs(wy - selectRowY - ScreenState.PAD / 3) < ScreenState.CHECKBOX_R + 10) {
+                if (dist(wx, wy, cx1, selectRowY) < r) {
+                    // toggle all needed
+                    boolean allNeeded = shoppingList.getAll().stream().allMatch(ShoppingItem::isNeeded);
+                    for (ShoppingItem item : shoppingList.getAll()) {
+                        item.setNeeded(!allNeeded);
                     }
                     state.rebuild();
                     return;
                 }
-                y -= ScreenState.ROW_H;
+
+                if (dist(wx, wy, cx2, selectRowY) < r) {
+                    // toggle all done
+                    boolean allDone = shoppingList.getAll().stream().allMatch(ShoppingItem::isDone);
+                    for (ShoppingItem item : shoppingList.getAll()) {
+                        item.setDone(!allDone);
+                    }
+                    state.rebuild();
+                    return;
+                }
+                //all shown
+                if (dist(wx, wy, cx3, selectRowY) < r) {
+                    toggleShowAll();
+                    return;
+                }
             }
-        }
+
+            // item rows
+        float y = state.screenH - ScreenState.HEADER_H - ScreenState.SEARCHBAR_H
+            + ScreenState.CHECKBOX_R*1.45f - ScreenState.PAD/1.7f + state.scrollY;
+        if (wy >= state.screenH - (ScreenState.HEADER_H+ScreenState.SEARCHBAR_H)) {
+            return;}
+            //start from the bottom - first see if tap in bottombar
+            for (Object row : state.rows) {
+                if (wy <= ScreenState.BOTTOM_BAR_H) break;
+                if (row instanceof String) {
+                    y -= ScreenState.CAT_H+10;
+                } //then see if tap in Item-Add-Row
+                    else if (row instanceof ScreenState.AddRow) {
+                        ScreenState.AddRow ar = (ScreenState.AddRow) row;
+                        float rowTop = y;
+                        float rowBot = y - ScreenState.ROW_H;
+                        if (wy >= rowBot && wy <= rowTop
+                            && wx >= ScreenState.PAD && wx <= state.screenW - ScreenState.PAD) {
+                            state.focusedAddRow = ar;
+                            state.addRowInput   = "";
+                            Gdx.input.setOnscreenKeyboardVisible(true);
+                            state.rebuild();
+                            return;
+                        }
+                        y -= ScreenState.ROW_H;
+                } else {
+                    ShoppingItem item = (ShoppingItem) row;
+                    float rowTop = y;
+                    float rowBot = y - ScreenState.ROW_H;
+
+
+
+                    //now check different circles at the item-rows
+                    if (wy >= rowBot && wy <= rowTop && wx >= ScreenState.PAD
+                        && wx <= state.screenW - ScreenState.PAD) {
+
+                        cx1 = ScreenState.PAD + 20 + ScreenState.CHECKBOX_R;
+                        cx2 = cx1 + 30 + ScreenState.CHECKBOX_R + ScreenState.PAD / 2;
+                        float cy = rowBot + ScreenState.ROW_H / 2f;
+                        float itemR = ScreenState.CHECKBOX_R + 5;
+
+                        // Red X hit — right edge of row
+                        float xSize = 28f * Gdx.graphics.getDensity();
+                        float xRight = state.screenW - ScreenState.PAD - 8f * Gdx.graphics.getDensity();
+                        float xCenterX = xRight - xSize / 2f;
+
+                        //done circle - remove item
+                        if (Math.abs(wx - xCenterX) < xSize / 2f + 8f
+                            && Math.abs(wy - cy) < xSize / 2f + 8f) {
+                            state.pendingRemove = item;
+                            return;
+                        }
+
+                        float distToNeeded = Math.abs(wx - cx1);
+                        float distToDone = Math.abs(wx - cx2);
+
+                        //needed circle
+                        if (dist(wx, wy, cx1, cy) < itemR) {
+                            shoppingList.toggleNeeded(item.getName());
+                            state.rebuild();
+                            return;
+
+                        //done circle set item to done
+                        } else if (dist(wx, wy, cx2, cy) < itemR) {
+                            toggleDone(item);
+                            state.rebuild();
+                            return;
+                        }
+
+                        return;
+                    }
+                    y -= ScreenState.ROW_H;
+                }
+            }
 
 
     }
 
     public void jumpToCategory(String category) {
         float dp = Gdx.graphics.getDensity();
-        Gdx.app.log("DEBUG", "jumping to: " + category);
-        float pos = ScreenState.HEADER_H + ScreenState.SEARCHBAR_H + ScreenState.PAD;
-        Gdx.app.log("JUMP", "looking for: '" + category + "'");
-        for (Object row : state.rows) {
+                float pos = ScreenState.HEADER_H + ScreenState.SEARCHBAR_H + ScreenState.PAD;
+           for (Object row : state.rows) {
             if (row instanceof String) {
-                if (((String) row).equals(category)) {
-                    state.scrollY  = state.clampScroll(pos - ScreenState.HEADER_H-67f*dp);
+                if ((row).equals(category)) {
+                    state.scrollY = state.clampScroll(pos - ScreenState.HEADER_H - ScreenState.SELECT_ROW_H-ScreenState.SEARCHBAR_H-ScreenState.PAD);
                     state.velocity = 0f;
                     return;
                 }
@@ -170,8 +353,113 @@ public class ScreenInput extends InputAdapter {
     }
 
     private boolean hitSearchBar(float wx, float wy) {
-        float barY = state.screenH - ScreenState.HEADER_H - ScreenState.SEARCHBAR_H;
-        return wx >= ScreenState.PAD && wx <= state.screenW - ScreenState.PAD
-                && wy >= barY && wy <= barY + ScreenState.SEARCHBAR_H;
+        float h = Gdx.graphics.getHeight();
+        float barX = ScreenState.PAD + ScreenState.PAD*3f;
+        float barY =  h - ScreenState.HEADER_H/2f - ScreenState.SEARCHBAR_H+ScreenState.PAD/1.5f;
+        float barW = state.screenW - barX - ScreenState.PAD;
+
+        return wx >= barX &&
+            wx <= barX+ barW &&
+            wy >= barY &&
+            wy <= barY + ScreenState.SEARCHBAR_H;
+
+    }
+
+    private void toggleDone(ShoppingItem item) {
+        if (item.isDone()) {
+            shoppingList.getDatabase()
+                .saveDoneStatus(item.getName(), false);
+            item.setDone(false);
+            strikeTimers.remove(item);
+        } else {
+            shoppingList.getDatabase()
+                .saveDoneStatus(item.getName(), true);
+            item.setVisible(true);
+            shoppingList.getDatabase().saveVisibilityStatus(item.getName(),true);
+            item.setDone(true);
+            strikeTimers.put(item, 0.5f);
+        }
+        state.rebuild();
+    }
+
+    private void toggleShowAll() {
+        boolean anyHidden = shoppingList.getAll().stream().anyMatch(i -> !i.isVisible());
+        for (ShoppingItem item : shoppingList.getAll()) {
+            if (anyHidden) {
+                shoppingList.getDatabase()
+                    .saveVisibilityStatus(item.getName(), true);
+                item.setVisible(true);
+            } else if (item.isDone()) {
+                shoppingList.getDatabase()
+                    .saveVisibilityStatus(item.getName(), false);
+                item.setVisible(false);
+
+            }
+        }
+        state.rebuild();
+    }
+
+    private boolean hitConfirm(float wx, float wy) {
+        float pw = 300f * Gdx.graphics.getDensity();
+        float ph = 160f * Gdx.graphics.getDensity();
+        float px = (state.screenW - pw) / 2f;
+        float py = (state.screenH - ph) / 2f;
+        float btnW = (pw - 30f * Gdx.graphics.getDensity()) / 2f;
+        float btnH = 44f * Gdx.graphics.getDensity();
+        float btnY = py + 16f * Gdx.graphics.getDensity();
+        float confirmX = px + pw / 2f + 8f * Gdx.graphics.getDensity();
+        return wx >= confirmX && wx <= confirmX + btnW && wy >= btnY && wy <= btnY + btnH;
+    }
+
+    private boolean hitCancel(float wx, float wy) {
+        float pw = 300f * Gdx.graphics.getDensity();
+        float ph = 160f * Gdx.graphics.getDensity();
+        float px = (state.screenW - pw) / 2f;
+        float py = (state.screenH - ph) / 2f;
+        float btnW = (pw - 30f * Gdx.graphics.getDensity()) / 2f;
+        float btnH = 44f * Gdx.graphics.getDensity();
+        float btnY = py + 16f * Gdx.graphics.getDensity();
+        float cancelX = px + 8f * Gdx.graphics.getDensity();
+        return wx >= cancelX && wx <= cancelX + btnW && wy >= btnY && wy <= btnY + btnH;
+    }
+
+    public void tickTimers(float delta) {
+
+        boolean needsRebuild = false;
+
+        Iterator<Map.Entry<ShoppingItem, Float>> it =
+            strikeTimers.entrySet().iterator();
+
+        while (it.hasNext()) {
+
+            Map.Entry<ShoppingItem, Float> entry = it.next();
+            float remaining = entry.getValue() - delta;
+
+            if (remaining <= 0f) {
+                ShoppingItem item = entry.getKey();
+                item.setVisible(false);
+
+
+                shoppingList.getDatabase()
+                    .saveVisibilityStatus(item.getName(), false);
+
+
+                it.remove();
+                needsRebuild = true;
+
+            } else {
+
+                entry.setValue(remaining);
+            }
+        }
+
+        if (needsRebuild) {
+            state.rebuild();
+        }
+    }
+
+    private float dist(float x1, float y1, float x2, float y2) {
+        float dx = x1 - x2, dy = y1 - y2;
+        return (float) Math.sqrt(dx*dx + dy*dy);
     }
 }

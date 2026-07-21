@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.sql.PreparedStatement;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -58,11 +59,23 @@ public class AndroidDatabase implements ItemDatabase {
         try {
             SQLiteDatabase db = getReadable();
             Cursor cursor = db.rawQuery("SELECT * FROM v_item_categories", null);
+            int nameIdx     = cursor.getColumnIndex("name");
+            int categoryIdx = cursor.getColumnIndex("category_name");
+            int neededIdx   = cursor.getColumnIndex("needed");
+            int doneIdx     = cursor.getColumnIndex("done");
+            int visibleIdx  = cursor.getColumnIndex("visible");
             while (cursor.moveToNext()) {
-                String name     = cursor.getString(0);
-                String category = cursor.getString(1);
-                String needed   = cursor.getString(2);
-                items.put(name, new String[]{category, needed != null ? needed : "1"});
+                String name     = cursor.getString(nameIdx);
+                String category = cursor.getString(categoryIdx);
+                String needed   = neededIdx  >= 0 ? cursor.getString(neededIdx)  : null;
+                String done     = doneIdx    >= 0 ? cursor.getString(doneIdx)    : null;
+                String visible  = visibleIdx >= 0 ? cursor.getString(visibleIdx) : null;
+                items.put(name, new String[]{
+                    category,
+                    needed  != null ? needed  : "1",
+                    visible != null ? visible : "1",
+                    done    != null ? done    : "0"
+                });
             }
             cursor.close();
             db.close();
@@ -95,6 +108,42 @@ public class AndroidDatabase implements ItemDatabase {
             SQLiteDatabase db = getWritable();
             db.execSQL("UPDATE items SET needed = ? WHERE name = ?",
                 new Object[]{needed ? 1 : 0, name});
+            db.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void saveVisibilityStatus(String name, boolean visible) {
+        try {
+            SQLiteDatabase db = getWritable();
+            db.execSQL("UPDATE items SET isVisible = ? WHERE name = ?",
+                new Object[]{visible ? 1 : 0, name});
+            db.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void saveDoneStatus(String name, boolean done) {
+        try {
+            SQLiteDatabase db = getWritable();
+            db.execSQL("UPDATE items SET done = ? WHERE name = ?",
+                new Object[]{done ? 1 : 0, name});
+            db.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void removeItem(String name) {
+        try {
+            SQLiteDatabase db = getWritable();
+            db.execSQL("DELETE FROM items WHERE name = ?",
+                new Object[]{name});
             db.close();
         } catch (Exception e) {
             e.printStackTrace();

@@ -37,7 +37,7 @@ public class ShoppingListScreen implements Screen {
         fonts    = new ScreenFonts();
         state    = new ScreenState(shoppingList);
         renderer = new ScreenRenderer(batch, shape, fonts, state);
-        input    = new ScreenInput(state, shoppingList);
+        input    = new ScreenInput(state, shoppingList,renderer);
 
         state.rebuild();
         if (pendingCategory != null) {
@@ -48,7 +48,8 @@ public class ShoppingListScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        state.update();
+        input.tickTimers(delta);
+         state.update();
 
         float w = Gdx.graphics.getWidth();
         float h = Gdx.graphics.getHeight();

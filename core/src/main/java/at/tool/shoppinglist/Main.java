@@ -7,7 +7,7 @@ public class Main extends Game{
     protected ShoppingList shoppingList;
     private ShoppingListScreen shoppingListScreen;
 
-    public void setDatabase(ItemDatabase database){
+    public void setDatabase(ItemDatabase database) {
         this.database = database;
     }
     @Override
@@ -26,9 +26,6 @@ public class Main extends Game{
             shoppingListScreen.jumpToCategory(jumpToCategory);
         }
         setScreen(shoppingListScreen);
-    }
-    public void showAddItem() {
-        setScreen(new AddItemScreen(this, shoppingList));
     }
 
 
