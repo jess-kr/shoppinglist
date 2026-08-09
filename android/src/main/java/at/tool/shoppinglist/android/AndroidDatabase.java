@@ -62,19 +62,16 @@ public class AndroidDatabase implements ItemDatabase {
             int nameIdx     = cursor.getColumnIndex("name");
             int categoryIdx = cursor.getColumnIndex("category_name");
             int neededIdx   = cursor.getColumnIndex("needed");
-            int doneIdx     = cursor.getColumnIndex("done");
             int visibleIdx  = cursor.getColumnIndex("visible");
             while (cursor.moveToNext()) {
                 String name     = cursor.getString(nameIdx);
                 String category = cursor.getString(categoryIdx);
                 String needed   = neededIdx  >= 0 ? cursor.getString(neededIdx)  : null;
-                String done     = doneIdx    >= 0 ? cursor.getString(doneIdx)    : null;
                 String visible  = visibleIdx >= 0 ? cursor.getString(visibleIdx) : null;
                 items.put(name, new String[]{
                     category,
                     needed  != null ? needed  : "1",
-                    visible != null ? visible : "1",
-                    done    != null ? done    : "0"
+                    visible != null ? visible : "1"
                 });
             }
             cursor.close();
@@ -120,18 +117,6 @@ public class AndroidDatabase implements ItemDatabase {
             SQLiteDatabase db = getWritable();
             db.execSQL("UPDATE items SET isVisible = ? WHERE name = ?",
                 new Object[]{visible ? 1 : 0, name});
-            db.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void saveDoneStatus(String name, boolean done) {
-        try {
-            SQLiteDatabase db = getWritable();
-            db.execSQL("UPDATE items SET done = ? WHERE name = ?",
-                new Object[]{done ? 1 : 0, name});
             db.close();
         } catch (Exception e) {
             e.printStackTrace();

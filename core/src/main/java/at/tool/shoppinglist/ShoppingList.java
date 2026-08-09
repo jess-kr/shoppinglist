@@ -16,18 +16,18 @@ public class ShoppingList{
             String name     = entry.getKey();
             String category = entry.getValue()[0];
             boolean needed  = !"0".equals(entry.getValue()[1]);
-            boolean done = entry.getValue().length <= 2 || !"0".equals(entry.getValue()[3]);
             boolean visible = entry.getValue().length <= 2 || !"0".equals(entry.getValue()[2]);
             ShoppingItem item = new ShoppingItem(name, category);
             item.setNeeded(needed);
             item.setVisible(visible);
-            item.setDone(done);
             shoppingList.put(name, item);
         }
     }
 public void toggle(String name) {
     if (shoppingList.containsKey(name)) {
-        shoppingList.get(name).setDone(!shoppingList.get(name).isDone());
+        ShoppingItem item = shoppingList.get(name);
+        item.setVisible(!item.isVisible());
+        database.saveVisibilityStatus(name, item.isVisible());
     }
 }
 
@@ -37,7 +37,9 @@ public void removeItem(String name) {
 
 public void unmark(String name) {
     if (shoppingList.containsKey(name)) {
-        shoppingList.get(name).setDone(false);
+        ShoppingItem item = shoppingList.get(name);
+        item.setVisible(false);
+        database.saveVisibilityStatus(name, false);
     }
 }
 
@@ -60,7 +62,7 @@ public ItemDatabase getDatabase() { return database; }
 
 public int getDoneCount() {
     return (int) shoppingList.values().stream()
-            .filter(ShoppingItem::isDone)
+            .filter(item -> !item.isVisible())
             .count();
 }
 
@@ -76,10 +78,8 @@ public int getDoneCount() {
             String name     = entry.getKey();
             String category = entry.getValue()[0];
             boolean needed  = !"0".equals(entry.getValue()[1]);
-            boolean done = entry.getValue().length <= 2 || !"0".equals(entry.getValue()[3]);
             boolean visible = entry.getValue().length <= 2 || !"0".equals(entry.getValue()[2]);
             ShoppingItem item = new ShoppingItem(name, category);
-            item.setDone(done);
             item.setNeeded(needed);
             item.setVisible(visible);
             shoppingList.put(name, item);

@@ -35,6 +35,7 @@ public class ScreenState {
 
     public List<Object> rows = new ArrayList<>();
     public List<String> categoryOrder = new ArrayList<>();
+    public final Map<ShoppingItem, Float> strikeTimers = new HashMap<>();
 
     private final ShoppingList shoppingList;
     public AddRow focusedAddRow = null;
@@ -56,8 +57,12 @@ public class ScreenState {
         Map<String, List<ShoppingItem>> byCat = new LinkedHashMap<>();
 
         for (ShoppingItem item : shoppingList.getAll()) {
-            if (!q.isEmpty() && !item.getName().toLowerCase().contains(q)) continue;
-            if (!item.isVisible()) continue;
+            if (!q.isEmpty()) {
+                if (!item.getName().toLowerCase().contains(q)) continue;
+                // If searching, show even invisible items
+            } else {
+                if (!item.isVisible()) continue;
+            }
             String cat = item.getCategory() != null ? item.getCategory() : "Other";
             byCat.computeIfAbsent(cat, k -> new ArrayList<>()).add(item);
         }
@@ -121,8 +126,9 @@ public class ScreenState {
     public void setAllVisible(boolean n){
         for (ShoppingItem item : shoppingList.getAll()) {
             item.setVisible(n);
-            }
+            shoppingList.getDatabase().saveVisibilityStatus(item.getName(), n);
         }
+    }
 
 
 public boolean allNeeded(){
@@ -139,13 +145,6 @@ public boolean allNeeded(){
                 oneNeeded = true; }
         }
         return oneNeeded;
-    }
-
-    public boolean allDone() {
-        for (Object row : rows) {
-            if (row instanceof ShoppingItem && !((ShoppingItem) row).isDone()) return false;
-        }
-        return true;
     }
 
     public float getVisibleHeight(float h) {

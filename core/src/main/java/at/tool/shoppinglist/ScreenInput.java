@@ -12,8 +12,6 @@ public class ScreenInput extends InputAdapter {
     private final ShoppingList shoppingList;
     private final ScreenRenderer renderer;
 
-    private final Map<ShoppingItem, Float> strikeTimers = new HashMap<>();
-
     public ScreenInput(ScreenState state, ShoppingList shoppingList, ScreenRenderer renderer) {
         this.state = state;
         this.shoppingList = shoppingList;
@@ -225,7 +223,6 @@ public class ScreenInput extends InputAdapter {
             float selectRowY = h - ScreenState.HEADER_H/1.3f - ScreenState.SEARCHBAR_H;
 
             float cx1 = ScreenState.PAD + 20 + ScreenState.CHECKBOX_R;
-            float cx2 = cx1 + 30 + ScreenState.CHECKBOX_R + ScreenState.PAD / 2;
             float cx3 = Gdx.graphics.getWidth()-ScreenState.SCROLLBAR_W-ScreenState.PAD*1.5f;
             float r = ScreenState.CHECKBOX_R + 10;
 
@@ -235,20 +232,12 @@ public class ScreenInput extends InputAdapter {
                     boolean allNeeded = shoppingList.getAll().stream().allMatch(ShoppingItem::isNeeded);
                     for (ShoppingItem item : shoppingList.getAll()) {
                         item.setNeeded(!allNeeded);
+                        shoppingList.getDatabase().saveNeededStatus(item.getName(), !allNeeded);
                     }
                     state.rebuild();
                     return;
                 }
 
-                if (dist(wx, wy, cx2, selectRowY) < r) {
-                    // toggle all done
-                    boolean allDone = shoppingList.getAll().stream().allMatch(ShoppingItem::isDone);
-                    for (ShoppingItem item : shoppingList.getAll()) {
-                        item.setDone(!allDone);
-                    }
-                    state.rebuild();
-                    return;
-                }
                 //all shown
                 if (dist(wx, wy, cx3, selectRowY) < r) {
                     toggleShowAll();
@@ -292,7 +281,6 @@ public class ScreenInput extends InputAdapter {
                         && wx <= state.screenW - ScreenState.PAD) {
 
                         cx1 = ScreenState.PAD + 20 + ScreenState.CHECKBOX_R;
-                        cx2 = cx1 + 30 + ScreenState.CHECKBOX_R + ScreenState.PAD / 2;
                         float cy = rowBot + ScreenState.ROW_H / 2f;
                         float itemR = ScreenState.CHECKBOX_R + 5;
 
@@ -308,9 +296,6 @@ public class ScreenInput extends InputAdapter {
                             return;
                         }
 
-                        float distToNeeded = Math.abs(wx - cx1);
-                        float distToDone = Math.abs(wx - cx2);
-
                         //needed circle
                         if (dist(wx, wy, cx1, cy) < itemR) {
                             shoppingList.toggleNeeded(item.getName());
@@ -318,7 +303,7 @@ public class ScreenInput extends InputAdapter {
                             return;
 
                         //done circle set item to done
-                        } else if (dist(wx, wy, cx2, cy) < itemR) {
+                        } else if (dist(wx, wy, cx1 + 30 + ScreenState.CHECKBOX_R + ScreenState.PAD / 2, cy) < itemR) {
                             toggleDone(item);
                             state.rebuild();
                             return;
@@ -366,36 +351,20 @@ public class ScreenInput extends InputAdapter {
     }
 
     private void toggleDone(ShoppingItem item) {
-        if (item.isDone()) {
-            shoppingList.getDatabase()
-                .saveDoneStatus(item.getName(), false);
-            item.setDone(false);
-            strikeTimers.remove(item);
-        } else {
-            shoppingList.getDatabase()
-                .saveDoneStatus(item.getName(), true);
+        if (!item.isVisible()) {
             item.setVisible(true);
-            shoppingList.getDatabase().saveVisibilityStatus(item.getName(),true);
-            item.setDone(true);
-            strikeTimers.put(item, 0.5f);
+            shoppingList.getDatabase().saveVisibilityStatus(item.getName(), true);
+            state.strikeTimers.remove(item);
+        } else {
+            // start timer to hide it
+            state.strikeTimers.put(item, 0.5f);
         }
         state.rebuild();
     }
 
     private void toggleShowAll() {
         boolean anyHidden = shoppingList.getAll().stream().anyMatch(i -> !i.isVisible());
-        for (ShoppingItem item : shoppingList.getAll()) {
-            if (anyHidden) {
-                shoppingList.getDatabase()
-                    .saveVisibilityStatus(item.getName(), true);
-                item.setVisible(true);
-            } else if (item.isDone()) {
-                shoppingList.getDatabase()
-                    .saveVisibilityStatus(item.getName(), false);
-                item.setVisible(false);
-
-            }
-        }
+        state.setAllVisible(anyHidden);
         state.rebuild();
     }
 
@@ -428,7 +397,7 @@ public class ScreenInput extends InputAdapter {
         boolean needsRebuild = false;
 
         Iterator<Map.Entry<ShoppingItem, Float>> it =
-            strikeTimers.entrySet().iterator();
+            state.strikeTimers.entrySet().iterator();
 
         while (it.hasNext()) {
 

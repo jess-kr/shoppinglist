@@ -143,18 +143,6 @@ public class ScreenRenderer {
         shape.end();
 
 
-        // done circle
-        shape.begin(ShapeRenderer.ShapeType.Filled);
-        shape.setColor(Color.WHITE);
-        shape.circle(cx2, rowY, r, 32);
-        shape.end();
-
-        // done texture overlay
-        batch.begin();
-        batch.draw(state.allDone()? doneTexture:notDoneTexture, cx2 - r, rowY-ScreenState.SELECT_ROW_H/3f, r * 2, r * 2);
-        batch.end();
-
-
         //show all circle
             shape.begin(ShapeRenderer.ShapeType.Filled);
             shape.setColor(Color.WHITE);
@@ -398,13 +386,14 @@ private void drawBorder(float h){
 
 
             //Checkmark if done
+            boolean isDone = !item.isVisible() || state.strikeTimers.containsKey(item);
             batch.begin();
-            batch.draw(item.isDone()? doneTexture : notDoneTexture, circleX-35, cy-35);
+            batch.draw(isDone ? doneTexture : notDoneTexture, circleX-35, cy-35);
             batch.end();
 
             //Text in Row
             batch.begin();
-            fonts.body.setColor(ScreenColors.TEXT_WHITE);
+            fonts.body.setColor(isDone ? new Color(1, 1, 1, 0.4f) : ScreenColors.TEXT_WHITE);
             fonts.body.draw(batch, item.getName(), circleX + ScreenState.CHECKBOX_R + 50, cy + 20);
             batch.end();
 

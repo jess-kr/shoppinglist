@@ -19,13 +19,11 @@ public class DesktopDatabase implements ItemDatabase {
                 String name     = rs.getString("name");
                 String category = rs.getString("category_name");
                 String needed   = rs.getString("needed");
-                String done     = rs.getString("done");
                 String visible  = rs.getString("visible");
                 items.put(name, new String[]{
                     category,
                     needed != null ? needed : "1",
-                    visible != null ? visible : "1",
-                    done    != null ? done    : "0"
+                    visible != null ? visible : "1"
                 });
             }
             conn.close();
@@ -86,24 +84,6 @@ public class DesktopDatabase implements ItemDatabase {
             PreparedStatement stmt = conn.prepareStatement(
                 "UPDATE items SET isVisible = ? WHERE name = ?");
             stmt.setInt(1, visible ? 1 : 0);
-            stmt.setString(2, name);
-            stmt.executeUpdate();
-            conn.close();
-        } catch (Exception e) {
-            System.out.println("DB error: " + e);
-        }
-
-    }
-
-    @Override
-    public void saveDoneStatus(String name, boolean done) {
-        try {
-            Class.forName("org.sqlite.JDBC");
-            String path = Gdx.files.internal("data/items.db").file().getAbsolutePath();
-            Connection conn = DriverManager.getConnection("jdbc:sqlite:" + path);
-            PreparedStatement stmt = conn.prepareStatement(
-                "UPDATE items SET done = ? WHERE name = ?");
-            stmt.setInt(1, done ? 1 : 0);
             stmt.setString(2, name);
             stmt.executeUpdate();
             conn.close();

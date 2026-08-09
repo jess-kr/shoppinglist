@@ -9,7 +9,5 @@ public interface ItemDatabase {
 
     void saveVisibilityStatus(String name, boolean visible);
 
-    void saveDoneStatus(String name, boolean done);
-
     void removeItem(String name);
 }
