@@ -1,6 +1,5 @@
 data/items.db
 fonts/DMSans-Regular.ttf
-libgdx.png
 media/background.png
 media/bar.png
 media/button.png
