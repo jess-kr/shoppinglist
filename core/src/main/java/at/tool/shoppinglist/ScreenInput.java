@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 public class ScreenInput extends InputAdapter {
@@ -230,10 +231,15 @@ public class ScreenInput extends InputAdapter {
                 if (dist(wx, wy, cx1, selectRowY) < r) {
                     // toggle all needed
                     boolean allNeeded = shoppingList.getAll().stream().allMatch(ShoppingItem::isNeeded);
-                    for (ShoppingItem item : shoppingList.getAll()) {
+                    List<ShoppingItem> items = shoppingList.getAll();
+                    for (ShoppingItem item : items) {
                         item.setNeeded(!allNeeded);
-                        shoppingList.getDatabase().saveNeededStatus(item.getName(), !allNeeded);
                     }
+                    new Thread(() -> {
+                        for (ShoppingItem item : items) {
+                            shoppingList.getDatabase().saveNeededStatus(item.getName(), !allNeeded);
+                        }
+                    }).start();
                     state.rebuild();
                     return;
                 }

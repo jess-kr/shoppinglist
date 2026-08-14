@@ -1,4 +1,3 @@
-data/items.db
 fonts/DMSans-Regular.ttf
 media/background.png
 media/bar.png

@@ -121,10 +121,15 @@ public class ScreenState {
 
 
     public void setAllVisible(boolean n){
-        for (ShoppingItem item : shoppingList.getAll()) {
-            item.setVisible(n);
-            shoppingList.getDatabase().saveVisibilityStatus(item.getName(), n);
+        List<ShoppingItem> items = shoppingList.getAll();
+        for (ShoppingItem item : items) {
+            item.setVisible(n); // local state updates immediately, UI can redraw right away
         }
+        new Thread(() -> {
+            for (ShoppingItem item : items) {
+                shoppingList.getDatabase().saveVisibilityStatus(item.getName(), n);
+            }
+        }).start();
     }
 
 
