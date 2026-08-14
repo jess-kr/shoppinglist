@@ -1,5 +1,9 @@
-<resources>
-    <style name="GdxTheme" parent="android:Theme.Material.Light.NoActionBar.Fullscreen">
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="GdxTheme" parent="android:Theme.Material.NoActionBar">
         <item name="android:colorBackground">@color/background</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+        <item name="android:navigationBarColor">@color/background</item>
+        <item name="android:statusBarColor">@color/background</item>
     </style>
 </resources>

@@ -3,7 +3,6 @@ package at.tool.shoppinglist;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Gdx;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -325,7 +324,6 @@ public class ScreenInput extends InputAdapter {
     }
 
     public void jumpToCategory(String category) {
-        float dp = Gdx.graphics.getDensity();
                 float pos = ScreenState.HEADER_H + ScreenState.SEARCHBAR_H + ScreenState.PAD;
            for (Object row : state.rows) {
             if (row instanceof String) {
@@ -357,14 +355,9 @@ public class ScreenInput extends InputAdapter {
     }
 
     private void toggleDone(ShoppingItem item) {
-        if (!item.isVisible()) {
-            item.setVisible(true);
-            shoppingList.getDatabase().saveVisibilityStatus(item.getName(), true);
-            state.strikeTimers.remove(item);
-        } else {
-            // start timer to hide it
-            state.strikeTimers.put(item, 0.5f);
-        }
+        boolean newVisible = !item.isVisible();
+        item.setVisible(newVisible);
+        shoppingList.getDatabase().saveVisibilityStatus(item.getName(), newVisible);
         state.rebuild();
     }
 

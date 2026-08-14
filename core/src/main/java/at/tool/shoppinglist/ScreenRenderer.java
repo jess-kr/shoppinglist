@@ -169,7 +169,7 @@ private void drawBorder(float h){
     float width = Gdx.graphics.getWidth()*dp;
 
     shape.begin(ShapeRenderer.ShapeType.Filled);
-    shape.setColor(ScreenColors.RED);
+    shape.setColor(ScreenColors.BLUE);
     shape.rect(0,y,width,ScreenState.PAD/3);
     shape.end();
 }

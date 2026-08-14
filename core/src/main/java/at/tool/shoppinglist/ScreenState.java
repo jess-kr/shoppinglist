@@ -131,20 +131,11 @@ public class ScreenState {
             }
         }).start();
     }
-
-
-public boolean allNeeded(){
-    for (Object row : rows) {
-        if (row instanceof ShoppingItem && !((ShoppingItem) row).isNeeded()){
-            return false; }
-    }
-    return true;
-}
     public boolean atLeastOneNeeded() {
         boolean oneNeeded = false;
         for (Object row : rows) {
             if (row instanceof ShoppingItem && ((ShoppingItem) row).isNeeded()){
-                oneNeeded = true; }
+                oneNeeded = true;}
         }
         return oneNeeded;
     }
