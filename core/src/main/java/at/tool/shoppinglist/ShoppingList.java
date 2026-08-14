@@ -32,7 +32,8 @@ public void toggle(String name) {
 }
 
 public void removeItem(String name) {
-    shoppingList.remove(name);
+        shoppingList.remove(name);
+        database.removeItem(name);
 }
 
 public void unmark(String name) {

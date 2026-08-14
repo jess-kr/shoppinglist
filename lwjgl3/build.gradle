@@ -29,6 +29,9 @@ if (JavaVersion.current().isJava9Compatible()) {
 }
 
 dependencies {
+  implementation 'org.postgresql:postgresql:42.7.3'
+  implementation 'com.zaxxer:HikariCP:5.1.0'
+  implementation 'io.github.cdimascio:java-dotenv:5.2.2'
   implementation "com.badlogicgames.gdx-controllers:gdx-controllers-desktop:$gdxControllersVersion"
   implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
   implementation "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"

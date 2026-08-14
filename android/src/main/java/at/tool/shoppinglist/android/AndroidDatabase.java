@@ -1,81 +1,76 @@
 package at.tool.shoppinglist.android;
 
 import android.content.Context;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
+import android.os.Handler;
+import android.os.Looper;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.sql.PreparedStatement;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
+import at.tool.shoppinglist.BuildConfig;
 import at.tool.shoppinglist.ItemDatabase;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
+/**
+ * ItemDatabase implementation backed by Supabase's REST API (PostgREST),
+ * so the Android app shares the same household data as the desktop app.
+ *
+ * Uses the public anon key, not a raw DB connection — access control is
+ * enforced entirely by Row Level Security policies on the Supabase tables.
+ * All calls run on a background executor since Android disallows network
+ * I/O on the main thread.
+ */
 public class AndroidDatabase implements ItemDatabase {
-    private final Context context;
-    private static final String DB_NAME = "items.db";
+
+    private static final MediaType JSON = MediaType.get("application/json");
+    private final String baseUrl = BuildConfig.SUPABASE_URL + "/rest/v1";
+    private final String anonKey = BuildConfig.SUPABASE_ANON_KEY;
+
+    private final OkHttpClient client = new OkHttpClient();
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public AndroidDatabase(Context context) {
-        this.context = context;
-        copyDatabaseIfNeeded();
+        // context kept for future use (e.g. local caching), no local DB copy needed anymore
     }
 
-    private void copyDatabaseIfNeeded() {
-        File dbFile = context.getDatabasePath(DB_NAME);
-        if (!dbFile.exists()) {
-            dbFile.getParentFile().mkdirs();
-            try {
-                InputStream in   = context.getAssets().open("data/" + DB_NAME);
-                OutputStream out = new FileOutputStream(dbFile);
-                byte[] buf = new byte[1024];
-                int len;
-                while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
-                in.close();
-                out.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+    private Request.Builder authedRequest(String url) {
+        return new Request.Builder()
+            .url(url)
+            .header("apikey", anonKey)
+            .header("Authorization", "Bearer " + anonKey);
     }
 
-    private SQLiteDatabase getReadable() {
-        return SQLiteDatabase.openDatabase(
-            context.getDatabasePath(DB_NAME).getAbsolutePath(),
-            null, SQLiteDatabase.OPEN_READONLY);
-    }
-
-    private SQLiteDatabase getWritable() {
-        return SQLiteDatabase.openDatabase(
-            context.getDatabasePath(DB_NAME).getAbsolutePath(),
-            null, SQLiteDatabase.OPEN_READWRITE);
-    }
+    // ---- synchronous versions (call only from a background thread) ----
 
     @Override
     public Map<String, String[]> loadItems() {
         Map<String, String[]> items = new LinkedHashMap<>();
-        try {
-            SQLiteDatabase db = getReadable();
-            Cursor cursor = db.rawQuery("SELECT * FROM v_item_categories", null);
-            int nameIdx     = cursor.getColumnIndex("name");
-            int categoryIdx = cursor.getColumnIndex("category_name");
-            int neededIdx   = cursor.getColumnIndex("needed");
-            int visibleIdx  = cursor.getColumnIndex("visible");
-            while (cursor.moveToNext()) {
-                String name     = cursor.getString(nameIdx);
-                String category = cursor.getString(categoryIdx);
-                String needed   = neededIdx  >= 0 ? cursor.getString(neededIdx)  : null;
-                String visible  = visibleIdx >= 0 ? cursor.getString(visibleIdx) : null;
-                items.put(name, new String[]{
-                    category,
-                    needed  != null ? needed  : "1",
-                    visible != null ? visible : "1"
-                });
+        Request request = authedRequest(baseUrl + "/v_item_categories?select=*").get().build();
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) return items;
+            JSONArray rows = new JSONArray(response.body().string());
+            for (int i = 0; i < rows.length(); i++) {
+                JSONObject row = rows.getJSONObject(i);
+                String name     = row.optString("name", null);
+                String category = row.optString("category_name", null);
+                String needed   = row.has("needed")  ? String.valueOf(row.get("needed"))  : "1";
+                String visible  = row.has("visible") ? String.valueOf(row.get("visible")) : "1";
+                if (name != null) {
+                    items.put(name, new String[]{category, needed, visible});
+                }
             }
-            cursor.close();
-            db.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -85,15 +80,25 @@ public class AndroidDatabase implements ItemDatabase {
     @Override
     public void saveNewItem(String name, String category) {
         try {
-            SQLiteDatabase db = getWritable();
-            Cursor cursor = db.rawQuery(
-                "SELECT id FROM category WHERE name = ?", new String[]{category});
-            int catId = 0;
-            if (cursor.moveToFirst()) catId = cursor.getInt(0);
-            cursor.close();
-            db.execSQL("INSERT INTO items (name, category) VALUES (?, ?)",
-                new Object[]{name, catId > 0 ? catId : null});
-            db.close();
+            Integer catId = null;
+            Request catReq = authedRequest(
+                baseUrl + "/category?name=eq." + urlEncode(category) + "&select=id").get().build();
+            try (Response resp = client.newCall(catReq).execute()) {
+                if (resp.isSuccessful() && resp.body() != null) {
+                    JSONArray arr = new JSONArray(resp.body().string());
+                    if (arr.length() > 0) catId = arr.getJSONObject(0).getInt("id");
+                }
+            }
+
+            JSONObject body = new JSONObject();
+            body.put("name", name);
+            body.put("category", catId);
+
+            Request insertReq = authedRequest(baseUrl + "/items")
+                .post(RequestBody.create(body.toString(), JSON))
+                .header("Prefer", "return=minimal")
+                .build();
+            client.newCall(insertReq).execute().close();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -101,37 +106,70 @@ public class AndroidDatabase implements ItemDatabase {
 
     @Override
     public void saveNeededStatus(String name, boolean needed) {
-        try {
-            SQLiteDatabase db = getWritable();
-            db.execSQL("UPDATE items SET needed = ? WHERE name = ?",
-                new Object[]{needed ? 1 : 0, name});
-            db.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        patchItem(name, "needed", needed ? 1 : 0);
     }
 
     @Override
     public void saveVisibilityStatus(String name, boolean visible) {
-        try {
-            SQLiteDatabase db = getWritable();
-            db.execSQL("UPDATE items SET isVisible = ? WHERE name = ?",
-                new Object[]{visible ? 1 : 0, name});
-            db.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        patchItem(name, "isVisible", visible ? 1 : 0);
     }
 
     @Override
     public void removeItem(String name) {
         try {
-            SQLiteDatabase db = getWritable();
-            db.execSQL("DELETE FROM items WHERE name = ?",
-                new Object[]{name});
-            db.close();
+            Request req = authedRequest(baseUrl + "/items?name=eq." + urlEncode(name))
+                .delete()
+                .build();
+            client.newCall(req).execute().close();
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void patchItem(String name, String column, int value) {
+        try {
+            JSONObject body = new JSONObject();
+            body.put(column, value);
+            Request req = authedRequest(baseUrl + "/items?name=eq." + urlEncode(name))
+                .patch(RequestBody.create(body.toString(), JSON))
+                .header("Prefer", "return=minimal")
+                .build();
+            client.newCall(req).execute().close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String urlEncode(String value) {
+        try {
+            return java.net.URLEncoder.encode(value, "UTF-8");
+        } catch (Exception e) {
+            return value;
+        }
+    }
+
+    // ---- async wrappers — call these from UI/game code ----
+
+    public void loadItemsAsync(Consumer<Map<String, String[]>> onLoaded) {
+        executor.submit(() -> {
+            Map<String, String[]> items = loadItems();
+            mainHandler.post(() -> onLoaded.accept(items));
+        });
+    }
+
+    public void saveNewItemAsync(String name, String category) {
+        executor.submit(() -> saveNewItem(name, category));
+    }
+
+    public void saveNeededStatusAsync(String name, boolean needed) {
+        executor.submit(() -> saveNeededStatus(name, needed));
+    }
+
+    public void saveVisibilityStatusAsync(String name, boolean visible) {
+        executor.submit(() -> saveVisibilityStatus(name, visible));
+    }
+
+    public void removeItemAsync(String name) {
+        executor.submit(() -> removeItem(name));
     }
 }

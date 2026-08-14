@@ -57,11 +57,8 @@ public class ScreenState {
         Map<String, List<ShoppingItem>> byCat = new LinkedHashMap<>();
 
         for (ShoppingItem item : shoppingList.getAll()) {
-            if (!q.isEmpty()) {
-                if (!item.getName().toLowerCase().contains(q)) continue;
-                // If searching, show even invisible items
-            } else {
-                if (!item.isVisible()) continue;
+            if (!q.isEmpty() && !item.getName().toLowerCase().contains(q)) {
+                continue;  // If searching, show even invisible item
             }
             String cat = item.getCategory() != null ? item.getCategory() : "Other";
             byCat.computeIfAbsent(cat, k -> new ArrayList<>()).add(item);

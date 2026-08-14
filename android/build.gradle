@@ -7,6 +7,12 @@ buildscript {
 }
 apply plugin: 'com.android.application'
 
+def localProps = new Properties()
+def localPropsFile = project.file("../local.properties")
+if (localPropsFile.exists()) {
+  localPropsFile.withInputStream { instr -> localProps.load(instr) }
+}
+
 
 android {
   namespace = "at.tool.shoppinglist"
@@ -22,6 +28,9 @@ android {
       jniLibs.setSrcDirs(['libs'])
     }
   }
+  buildFeatures {
+    buildConfig = true
+  }
   packagingOptions {
 		resources {
 			excludes += ['META-INF/robovm/ios/robovm.xml', 'META-INF/DEPENDENCIES.txt', 'META-INF/DEPENDENCIES',
@@ -36,6 +45,8 @@ android {
     targetSdkVersion 35
     versionCode 1
     versionName "1.0"
+    buildConfigField "String", "SUPABASE_URL", "\"${localProps.getProperty('SUPABASE_URL', '')}\""
+    buildConfigField "String", "SUPABASE_ANON_KEY", "\"${localProps.getProperty('SUPABASE_ANON_KEY', '')}\""
   }
   compileOptions {
     sourceCompatibility "8"
@@ -63,6 +74,7 @@ dependencies {
   implementation "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
   implementation project(':core')
   implementation 'androidx.core:core:1.12.0'
+  implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 
   natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-arm64-v8a"
   natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-armeabi-v7a"

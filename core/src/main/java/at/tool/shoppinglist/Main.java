@@ -2,6 +2,7 @@ package at.tool.shoppinglist;
 
 import com.badlogic.gdx.Game;
 
+
 public class Main extends Game{
     private ItemDatabase database;
     protected ShoppingList shoppingList;
@@ -10,9 +11,12 @@ public class Main extends Game{
     public void setDatabase(ItemDatabase database) {
         this.database = database;
     }
+
     @Override
     public void create() {
-        if (database == null) database = new DesktopDatabase();
+        if (database == null) {
+            throw new IllegalStateException("ItemDatabase must be set via setDatabase() before create()");
+        }
 
     shoppingList = new ShoppingList(new Items(database),database);
     shoppingListScreen = new ShoppingListScreen(database);
