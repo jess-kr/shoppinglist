@@ -35,7 +35,6 @@ public class ScreenState {
 
     public List<Object> rows = new ArrayList<>();
     public List<String> categoryOrder = new ArrayList<>();
-    public final Map<ShoppingItem, Float> strikeTimers = new HashMap<>();
 
     private final ShoppingList shoppingList;
     public AddRow focusedAddRow = null;

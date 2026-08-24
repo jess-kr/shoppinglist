@@ -1,8 +1,6 @@
 package at.tool.shoppinglist.android;
 
 import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -11,7 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Consumer;
 
 import at.tool.shoppinglist.BuildConfig;
 import at.tool.shoppinglist.ItemDatabase;
@@ -21,15 +18,6 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-/**
- * ItemDatabase implementation backed by Supabase's REST API (PostgREST),
- * so the Android app shares the same household data as the desktop app.
- *
- * Uses the public anon key, not a raw DB connection — access control is
- * enforced entirely by Row Level Security policies on the Supabase tables.
- * All calls run on a background executor since Android disallows network
- * I/O on the main thread.
- */
 public class AndroidDatabase implements ItemDatabase {
 
     private static final MediaType JSON = MediaType.get("application/json");
@@ -38,7 +26,6 @@ public class AndroidDatabase implements ItemDatabase {
 
     private final OkHttpClient client = new OkHttpClient();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public AndroidDatabase(Context context) {
         // context kept for future use (e.g. local caching), no local DB copy needed anymore
@@ -62,13 +49,13 @@ public class AndroidDatabase implements ItemDatabase {
             JSONArray rows = new JSONArray(response.body().string());
             for (int i = 0; i < rows.length(); i++) {
                 JSONObject row = rows.getJSONObject(i);
-                String name     = row.optString("name", null);
+                String name = row.optString("name", null);
                 String category = row.optString("category_name", null);
-                String needed  = row.has("needed")  ? (row.optBoolean("needed", true)  ? "1" : "0") : "1";
+                String needed = row.has("needed") ? (row.optBoolean("needed", true) ? "1" : "0") : "1";
                 String visible = row.has("visible") ? (row.optBoolean("visible", true) ? "1" : "0") : "1";
-                if (name != null) {
-                    items.put(name, new String[]{category, needed, visible});
-                }
+                String done = row.has("done") ? (row.optBoolean("done", false) ? "1" : "0") : "0";
+                items.put(name, new String[]{category, needed, visible, done});
+
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -114,6 +101,11 @@ public class AndroidDatabase implements ItemDatabase {
     }
 
     @Override
+    public void saveDoneStatus(String name, boolean done) {
+        executor.submit(() -> patchItem(name, "done", done));
+    }
+
+    @Override
     public void removeItem(String name) {
         executor.submit(() -> {
             try {
@@ -150,30 +142,5 @@ public class AndroidDatabase implements ItemDatabase {
         } catch (Exception e) {
             return value;
         }
-    }
-
-    // ---- async wrappers — call these from UI/game code ----
-
-    public void loadItemsAsync(Consumer<Map<String, String[]>> onLoaded) {
-        executor.submit(() -> {
-            Map<String, String[]> items = loadItems();
-            mainHandler.post(() -> onLoaded.accept(items));
-        });
-    }
-
-    public void saveNewItemAsync(String name, String category) {
-        executor.submit(() -> saveNewItem(name, category));
-    }
-
-    public void saveNeededStatusAsync(String name, boolean needed) {
-        executor.submit(() -> saveNeededStatus(name, needed));
-    }
-
-    public void saveVisibilityStatusAsync(String name, boolean visible) {
-        executor.submit(() -> saveVisibilityStatus(name, visible));
-    }
-
-    public void removeItemAsync(String name) {
-        executor.submit(() -> removeItem(name));
     }
 }

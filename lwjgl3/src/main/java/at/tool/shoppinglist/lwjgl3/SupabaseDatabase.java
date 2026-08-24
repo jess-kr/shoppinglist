@@ -49,10 +49,12 @@ public class SupabaseDatabase implements ItemDatabase {
                 String category = rs.getString("category_name");
                 String needed   = rs.getString("needed");
                 String visible  = rs.getString("visible");
+                String done     = rs.getString("done");
                 items.put(name, new String[]{
                     category,
                     needed != null ? needed : "1",
-                    visible != null ? visible : "1"
+                    visible != null ? visible : "1",
+                    done != null ? done : "0"
                 });
             }
         } catch (SQLException e) {
@@ -61,14 +63,7 @@ public class SupabaseDatabase implements ItemDatabase {
         return items;
     }
 
-    public void loadItemsAsync(java.util.function.Consumer<Map<String, String[]>> onLoaded) {
-        executor.submit(() -> {
-            Map<String, String[]> items = loadItems();
-            Gdx.app.postRunnable(() -> onLoaded.accept(items));
-        });
-    }
-
-    @Override
+      @Override
     public void saveNewItem(String name, String category) {
         executor.submit(() -> {
             try (Connection conn = dataSource.getConnection()) {
@@ -113,11 +108,26 @@ public class SupabaseDatabase implements ItemDatabase {
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(
                      "UPDATE items SET isVisible = ? WHERE name = ?")) {
-                stmt.setInt(1, visible ? 1 : 0);
+                stmt.setBoolean(1, visible);
                 stmt.setString(2, name);
                 stmt.executeUpdate();
             } catch (SQLException e) {
                 Gdx.app.error("SupabaseDatabase", "saveVisibilityStatus failed", e);
+            }
+        });
+    }
+
+    @Override
+    public void saveDoneStatus(String name, boolean done) {
+        executor.submit(() -> {
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(
+                     "UPDATE items SET done = ? WHERE name = ?")) {
+                stmt.setBoolean(1, done);
+                stmt.setString(2, name);
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                Gdx.app.error("SupabaseDatabase", "saveDoneStatus failed", e);
             }
         });
     }

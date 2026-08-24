@@ -156,7 +156,7 @@ public class ScreenRenderer {
         float notVisibleIconHeight = notAllVisibleTexture.getHeight()*scale;
         float notVisibleIconWidth = notAllVisibleTexture.getWidth()*scale;
             batch.begin();
-            batch.draw(allVisible? visibleTexture: notAllVisibleTexture, cx3-ScreenState.PAD/2.3f, rowY+ScreenState.CHECKBOX_R/2f-17f*dp, allVisible? visibleIconWidth: notVisibleIconWidth, allVisible? visibleIconHeight : notVisibleIconHeight);
+            batch.draw(allVisible? visibleTexture: notAllVisibleTexture , cx3-ScreenState.PAD/2.3f, rowY+ScreenState.CHECKBOX_R/2f-17f*dp, allVisible? visibleIconWidth: notVisibleIconWidth, allVisible? visibleIconHeight : notVisibleIconHeight);
             batch.end();
     }
 private void drawBorder(float h){
@@ -233,16 +233,14 @@ private void drawBorder(float h){
                 }
                 y -= ScreenState.CAT_H+10;
             }   else if (row instanceof ScreenState.AddRow) {
-                ScreenState.AddRow ar = (ScreenState.AddRow) row;
                 if (y > -ScreenState.ROW_H && y < h + ScreenState.ROW_H) {
-                    drawGhostAddRow(ar, ScreenState.PAD, y - ScreenState.ROW_H,
+                    drawGhostAddRow(ScreenState.PAD, y - ScreenState.ROW_H,
                         w - ScreenState.PAD * 2 - 10, ScreenState.ROW_H);
                 }
                 y -= ScreenState.ROW_H;
             } else {
-                ShoppingItem item = (ShoppingItem) row;
                 if (y > -ScreenState.ROW_H && y < h + ScreenState.ROW_H) {
-                    drawGhostItemRow(item, ScreenState.PAD, y - ScreenState.ROW_H,
+                    drawGhostItemRow(ScreenState.PAD, y - ScreenState.ROW_H,
                         w - ScreenState.PAD * 2-10, ScreenState.ROW_H);
                 }
                 y -= ScreenState.ROW_H;
@@ -296,11 +294,9 @@ private void drawBorder(float h){
 
     }
 
-    private void drawGhostAddRow(ScreenState.AddRow ar, float x, float y, float w, float h) {
+    private void drawGhostAddRow( float x, float y, float w, float h) {
         shape.setProjectionMatrix(state.projMatrix);
         batch.setProjectionMatrix(state.projMatrix);
-        boolean focused = state.focusedAddRow != null
-            && ar.category.equals(state.focusedAddRow.category);
 
 
         batch.begin();
@@ -347,7 +343,7 @@ private void drawBorder(float h){
         batch.end();
     }
 
-    private void drawGhostItemRow(ShoppingItem item, float x, float y, float w, float h){
+    private void drawGhostItemRow(float x, float y, float w, float h){
         batch.begin();
         ghostRowPatch.draw(batch, x, y + 2, w, h - 4);
         batch.end();
@@ -382,7 +378,7 @@ private void drawBorder(float h){
 
 
             //Checkmark if done
-            boolean isDone = !item.isVisible() || state.strikeTimers.containsKey(item);
+            boolean isDone = item.isDone();
             batch.begin();
             batch.draw(isDone ? doneTexture : notDoneTexture, circleX-35, cy-35);
             batch.end();

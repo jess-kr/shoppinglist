@@ -3,9 +3,7 @@ package at.tool.shoppinglist;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Gdx;
 
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 public class ScreenInput extends InputAdapter {
     private final ScreenState state;
@@ -360,28 +358,18 @@ public class ScreenInput extends InputAdapter {
     }
 
     private void toggleDone(ShoppingItem item) {
-        if (!item.isVisible()) {
-            // If already invisible (shown in search), clicking checkbox restores it
-            item.setVisible(true);
-            shoppingList.getDatabase().saveVisibilityStatus(item.getName(), true);
-            state.strikeTimers.remove(item);
-        } else if (state.strikeTimers.containsKey(item)) {
-            // If already striking, cancel it
-            state.strikeTimers.remove(item);
-        } else {
-            // Start strike timer
-            state.strikeTimers.put(item, 0.5f);
-        }
+        item.setDone(!item.isDone());
+        shoppingList.getDatabase().saveDoneStatus(item.getName(), item.isDone());
         state.rebuild();
     }
 
     private void toggleShowAll() {
         if (state.allVisible()) {
-            // Currently showing everything -> filter to only needed items
+            // Currently showing everything -> switch to showing only needed items
             List<ShoppingItem> allItems = shoppingList.getAll();
             for (ShoppingItem item : allItems) {
-                boolean shouldBeVisible = item.isNeeded();
-                item.setVisible(shouldBeVisible);
+                // If an item is NOT needed, hide it from the current view
+                item.setVisible(item.isNeeded());
             }
             new Thread(() -> {
                 for (ShoppingItem item : allItems) {
@@ -389,7 +377,7 @@ public class ScreenInput extends InputAdapter {
                 }
             }).start();
         } else {
-            // Currently filtered -> show everything
+            // Currently filtered -> switch to showing everything in the "shopping list"
             state.setAllVisible(true);
         }
         state.rebuild();
@@ -417,41 +405,6 @@ public class ScreenInput extends InputAdapter {
         float btnY = py + 16f * Gdx.graphics.getDensity();
         float cancelX = px + 8f * Gdx.graphics.getDensity();
         return wx >= cancelX && wx <= cancelX + btnW && wy >= btnY && wy <= btnY + btnH;
-    }
-
-    public void tickTimers(float delta) {
-
-        boolean needsRebuild = false;
-
-        Iterator<Map.Entry<ShoppingItem, Float>> it =
-            state.strikeTimers.entrySet().iterator();
-
-        while (it.hasNext()) {
-
-            Map.Entry<ShoppingItem, Float> entry = it.next();
-            float remaining = entry.getValue() - delta;
-
-            if (remaining <= 0f) {
-                ShoppingItem item = entry.getKey();
-                item.setVisible(false);
-
-
-                shoppingList.getDatabase()
-                    .saveVisibilityStatus(item.getName(), false);
-
-
-                it.remove();
-                needsRebuild = true;
-
-            } else {
-
-                entry.setValue(remaining);
-            }
-        }
-
-        if (needsRebuild) {
-            state.rebuild();
-        }
     }
 
     private float dist(float x1, float y1, float x2, float y2) {

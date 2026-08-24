@@ -15,19 +15,27 @@ public class ShoppingList{
         for (Map.Entry<String, String[]> entry : items.getList().entrySet()) {
             String name     = entry.getKey();
             String category = entry.getValue()[0];
-            boolean needed  = !"0".equals(entry.getValue()[1]);
-            boolean visible = entry.getValue().length <= 2 || !"0".equals(entry.getValue()[2]);
+            boolean needed  = isTrue(entry.getValue()[1]);
+            boolean visible = entry.getValue().length <= 2 || isTrue(entry.getValue()[2]);
+            boolean done    = entry.getValue().length > 3 && isTrue(entry.getValue()[3]);
             ShoppingItem item = new ShoppingItem(name, category);
             item.setNeeded(needed);
             item.setVisible(visible);
+            item.setDone(done);
             shoppingList.put(name, item);
         }
     }
 
-public void removeItem(String name) {
+    private boolean isTrue(String val) {
+        if (val == null) return false;
+        String v = val.toLowerCase();
+        return v.equals("1") || v.equals("true") || v.equals("t");
+    }
+
+    public void removeItem(String name) {
         shoppingList.remove(name);
         database.removeItem(name);
-}
+    }
 
 
     public void toggleNeeded(String name) {
@@ -38,11 +46,11 @@ public void removeItem(String name) {
         }
     }
 
-public List<ShoppingItem> getAll() {
-    return new ArrayList<>(shoppingList.values());
-}
+    public List<ShoppingItem> getAll() {
+        return new ArrayList<>(shoppingList.values());
+    }
 
-public ItemDatabase getDatabase() { return database; }
+    public ItemDatabase getDatabase() { return database; }
 
     public void reload() {
         shoppingList.clear();
@@ -50,11 +58,13 @@ public ItemDatabase getDatabase() { return database; }
         for (Map.Entry<String, String[]> entry : items.getList().entrySet()) {
             String name     = entry.getKey();
             String category = entry.getValue()[0];
-            boolean needed  = !"0".equals(entry.getValue()[1]);
-            boolean visible = entry.getValue().length <= 2 || !"0".equals(entry.getValue()[2]);
+            boolean needed  = isTrue(entry.getValue()[1]);
+            boolean visible = entry.getValue().length <= 2 || isTrue(entry.getValue()[2]);
+            boolean done    = entry.getValue().length > 3 && isTrue(entry.getValue()[3]);
             ShoppingItem item = new ShoppingItem(name, category);
             item.setNeeded(needed);
             item.setVisible(visible);
+            item.setDone(done);
             shoppingList.put(name, item);
         }
     }

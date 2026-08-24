@@ -8,6 +8,7 @@ public interface ItemDatabase {
     void saveNeededStatus(String name, boolean needed);
 
     void saveVisibilityStatus(String name, boolean visible);
+    void saveDoneStatus(String name, boolean done);
 
     void removeItem(String name);
 }
