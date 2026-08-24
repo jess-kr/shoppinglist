@@ -48,7 +48,6 @@ public class ShoppingListScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        input.tickTimers(delta);
          state.update();
 
         float w = Gdx.graphics.getWidth();
