@@ -56,10 +56,19 @@ public class ScreenState {
         String q = searchQuery.toLowerCase().trim();
         Map<String, List<ShoppingItem>> byCat = new LinkedHashMap<>();
 
+        if (!q.isEmpty()) Gdx.app.log("ScreenState", "Searching for: '" + q + "'");
+
         for (ShoppingItem item : shoppingList.getAll()) {
-            if (!q.isEmpty() && !item.getName().toLowerCase().contains(q)) {
-                continue;  // If searching, show even invisible item
+            boolean matchesSearch = !q.isEmpty() && item.getName().toLowerCase().contains(q);
+
+            if (!q.isEmpty()) {
+                if (!matchesSearch) continue;
+                // If we are searching, we show the item even if it's invisible
+            } else {
+                // If NOT searching, we only show visible items
+                if (!item.isVisible()) continue;
             }
+
             String cat = item.getCategory() != null ? item.getCategory() : "Other";
             byCat.computeIfAbsent(cat, k -> new ArrayList<>()).add(item);
         }

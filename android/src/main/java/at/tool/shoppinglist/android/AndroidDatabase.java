@@ -7,7 +7,6 @@ import android.os.Looper;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -65,8 +64,8 @@ public class AndroidDatabase implements ItemDatabase {
                 JSONObject row = rows.getJSONObject(i);
                 String name     = row.optString("name", null);
                 String category = row.optString("category_name", null);
-                String needed   = row.has("needed")  ? String.valueOf(row.get("needed"))  : "1";
-                String visible  = row.has("visible") ? String.valueOf(row.get("visible")) : "1";
+                String needed  = row.has("needed")  ? (row.optBoolean("needed", true)  ? "1" : "0") : "1";
+                String visible = row.has("visible") ? (row.optBoolean("visible", true) ? "1" : "0") : "1";
                 if (name != null) {
                     items.put(name, new String[]{category, needed, visible});
                 }
@@ -106,35 +105,40 @@ public class AndroidDatabase implements ItemDatabase {
 
     @Override
     public void saveNeededStatus(String name, boolean needed) {
-        patchItem(name, "needed", needed ? 1 : 0);
+        executor.submit(() -> patchItem(name, "needed", needed));
     }
 
     @Override
     public void saveVisibilityStatus(String name, boolean visible) {
-        patchItem(name, "isVisible", visible ? 1 : 0);
+        executor.submit(() -> patchItem(name, "isVisible", visible));
     }
 
     @Override
     public void removeItem(String name) {
-        try {
-            Request req = authedRequest(baseUrl + "/items?name=eq." + urlEncode(name))
-                .delete()
-                .build();
-            client.newCall(req).execute().close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        executor.submit(() -> {
+            try {
+                Request req = authedRequest(baseUrl + "/items?name=eq." + urlEncode(name))
+                    .delete()
+                    .build();
+                client.newCall(req).execute().close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
-    private void patchItem(String name, String column, int value) {
+    private void patchItem(String name, String column, boolean value) {
         try {
             JSONObject body = new JSONObject();
             body.put(column, value);
             Request req = authedRequest(baseUrl + "/items?name=eq." + urlEncode(name))
                 .patch(RequestBody.create(body.toString(), JSON))
-                .header("Prefer", "return=minimal")
+                .header("Prefer", "return=representation")
                 .build();
-            client.newCall(req).execute().close();
+            try (Response resp = client.newCall(req).execute()) {
+                android.util.Log.d("AndroidDatabase", "patch " + column + " -> " + resp.code()
+                    + " : " + (resp.body() != null ? resp.body().string() : "null"));
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

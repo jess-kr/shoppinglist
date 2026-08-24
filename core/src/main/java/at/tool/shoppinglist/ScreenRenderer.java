@@ -123,7 +123,6 @@ public class ScreenRenderer {
         float dp      = Gdx.graphics.getDensity();
         float rowY    = h - ScreenState.HEADER_H/1.3f - ScreenState.SEARCHBAR_H;
         float cx1     = ScreenState.PAD + 20 + ScreenState.CHECKBOX_R;
-        float cx2     = cx1 + 30 + ScreenState.CHECKBOX_R + ScreenState.PAD / 2;
         float cx3 = Gdx.graphics.getWidth()-ScreenState.SCROLLBAR_W-ScreenState.PAD*1.5f;
 
         float r    = ScreenState.CHECKBOX_R + 10;
@@ -159,8 +158,6 @@ public class ScreenRenderer {
             batch.begin();
             batch.draw(allVisible? visibleTexture: notAllVisibleTexture, cx3-ScreenState.PAD/2.3f, rowY+ScreenState.CHECKBOX_R/2f-17f*dp, allVisible? visibleIconWidth: notVisibleIconWidth, allVisible? visibleIconHeight : notVisibleIconHeight);
             batch.end();
-
-       float w = Gdx.graphics.getWidth();
     }
 private void drawBorder(float h){
     float rowY    = h - ScreenState.HEADER_H - ScreenState.SEARCHBAR_H;
@@ -304,7 +301,6 @@ private void drawBorder(float h){
         batch.setProjectionMatrix(state.projMatrix);
         boolean focused = state.focusedAddRow != null
             && ar.category.equals(state.focusedAddRow.category);
-        float dp = Gdx.graphics.getDensity();
 
 
         batch.begin();

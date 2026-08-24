@@ -4,7 +4,7 @@ import java.util.*;
 
 public class ShoppingList{
 
-    private Map<String, ShoppingItem> shoppingList = new HashMap<>();
+    private final Map<String, ShoppingItem> shoppingList = new HashMap<>();
 
     private Items items;
     private final ItemDatabase database;
@@ -23,26 +23,12 @@ public class ShoppingList{
             shoppingList.put(name, item);
         }
     }
-public void toggle(String name) {
-    if (shoppingList.containsKey(name)) {
-        ShoppingItem item = shoppingList.get(name);
-        item.setVisible(!item.isVisible());
-        database.saveVisibilityStatus(name, item.isVisible());
-    }
-}
 
 public void removeItem(String name) {
         shoppingList.remove(name);
         database.removeItem(name);
 }
 
-public void unmark(String name) {
-    if (shoppingList.containsKey(name)) {
-        ShoppingItem item = shoppingList.get(name);
-        item.setVisible(false);
-        database.saveVisibilityStatus(name, false);
-    }
-}
 
     public void toggleNeeded(String name) {
         if (shoppingList.containsKey(name)) {
@@ -56,21 +42,7 @@ public List<ShoppingItem> getAll() {
     return new ArrayList<>(shoppingList.values());
 }
 
-public int getTotalCount() {
-    return shoppingList.size();
-}
 public ItemDatabase getDatabase() { return database; }
-
-public int getDoneCount() {
-    return (int) shoppingList.values().stream()
-            .filter(item -> !item.isVisible())
-            .count();
-}
-
-    public void addItem(String name, String category) {
-        shoppingList.put(name, new ShoppingItem(name, category));
-        database.saveNewItem(name, category);
-    }
 
     public void reload() {
         shoppingList.clear();

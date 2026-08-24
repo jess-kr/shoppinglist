@@ -20,7 +20,7 @@ public class ShoppingListScreen implements Screen {
     private ScreenInput input;
     private ScreenState state;
 
-    private ItemDatabase database;
+    private final ItemDatabase database;
     private String pendingCategory = null;
 
     public ShoppingListScreen(ItemDatabase database) {

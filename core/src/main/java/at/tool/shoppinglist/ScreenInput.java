@@ -184,8 +184,12 @@ public class ScreenInput extends InputAdapter {
     //Search Bar Input
         if (!state.searchFocused) return false;
         if (c == '\b') {
-            if (!state.searchQuery.isEmpty())
+            if (!state.searchQuery.isEmpty()) {
                 state.searchQuery = state.searchQuery.substring(0, state.searchQuery.length() - 1);
+            }
+        } else if (c == '\r' || c == '\n') {
+            state.searchFocused = false;
+            Gdx.input.setOnscreenKeyboardVisible(false);
         } else if (c >= 32) {
             state.searchQuery += c;
         }
@@ -230,13 +234,14 @@ public class ScreenInput extends InputAdapter {
                 if (dist(wx, wy, cx1, selectRowY) < r) {
                     // toggle all needed
                     boolean allNeeded = shoppingList.getAll().stream().allMatch(ShoppingItem::isNeeded);
-                    List<ShoppingItem> items = shoppingList.getAll();
-                    for (ShoppingItem item : items) {
-                        item.setNeeded(!allNeeded);
+                    boolean target = !allNeeded;
+                    List<ShoppingItem> allItems = shoppingList.getAll();
+                    for (ShoppingItem item : allItems) {
+                        item.setNeeded(target);
                     }
                     new Thread(() -> {
-                        for (ShoppingItem item : items) {
-                            shoppingList.getDatabase().saveNeededStatus(item.getName(), !allNeeded);
+                        for (ShoppingItem item : allItems) {
+                            shoppingList.getDatabase().saveNeededStatus(item.getName(), target);
                         }
                     }).start();
                     state.rebuild();
@@ -355,15 +360,38 @@ public class ScreenInput extends InputAdapter {
     }
 
     private void toggleDone(ShoppingItem item) {
-        boolean newVisible = !item.isVisible();
-        item.setVisible(newVisible);
-        shoppingList.getDatabase().saveVisibilityStatus(item.getName(), newVisible);
+        if (!item.isVisible()) {
+            // If already invisible (shown in search), clicking checkbox restores it
+            item.setVisible(true);
+            shoppingList.getDatabase().saveVisibilityStatus(item.getName(), true);
+            state.strikeTimers.remove(item);
+        } else if (state.strikeTimers.containsKey(item)) {
+            // If already striking, cancel it
+            state.strikeTimers.remove(item);
+        } else {
+            // Start strike timer
+            state.strikeTimers.put(item, 0.5f);
+        }
         state.rebuild();
     }
 
     private void toggleShowAll() {
-        boolean anyHidden = shoppingList.getAll().stream().anyMatch(i -> !i.isVisible());
-        state.setAllVisible(anyHidden);
+        if (state.allVisible()) {
+            // Currently showing everything -> filter to only needed items
+            List<ShoppingItem> allItems = shoppingList.getAll();
+            for (ShoppingItem item : allItems) {
+                boolean shouldBeVisible = item.isNeeded();
+                item.setVisible(shouldBeVisible);
+            }
+            new Thread(() -> {
+                for (ShoppingItem item : allItems) {
+                    shoppingList.getDatabase().saveVisibilityStatus(item.getName(), item.isVisible());
+                }
+            }).start();
+        } else {
+            // Currently filtered -> show everything
+            state.setAllVisible(true);
+        }
         state.rebuild();
     }
 
